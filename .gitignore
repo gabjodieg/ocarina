@@ -1,32 +1,463 @@
-# Prerequisites
-*.d
+// ---------------------------------------------------------------------------
+// Test circuit for a wearable pin concept.
+//
+// Inspiration taken from:
+// zelda song player by mitomon:
+// https://github.com/mitomon/MitosArduinoScripts/blob/master/zeldaSongPlayer/zeldaSongPlayer.ino
+// Mini violin by Alexandra Covor:
+// https://www.hackster.io/alexandracovor/attiny85-mini-pcb-violin-d728e5
+// ---------------------------------------------------------------------------
 
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
+void TimerFreeTone(uint8_t pin, unsigned long frequency, unsigned int duration, uint8_t volume = 10);
 
-# Precompiled Headers
-*.gch
-*.pch
+const int CHECK_SONG_LENGTH = 8;
+const int SONG_COUNT = 21;
 
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
+const short d = 1;
+const short b = 2;
+const short a = 3;
+const short f = 4;
+const short D = 5;
 
-# Fortran module files
-*.mod
-*.smod
+// Songs sorted by final notes
+const short all_songs[SONG_COUNT][CHECK_SONG_LENGTH] PROGMEM = {
+  {-1, -1, D, d, b, a, b, a}, // minuet_of_forest
+  {-1, -1, d, b, a, d, b, a}, // eponas_song
+  {-1, b, d, b, a, f, b, a}, // new_wave_bossa_nova
+  {-1, -1, b, d, a, b, d, a}, // zeldas_lullaby
+  {-1, -1, f, D, a, f, D, a}, // inverted_song_of_time
+  {-1, -1, -1, D, f, a, a, b}, // serenade_of_water
+  {-1, -1, f, a, b, f, a, b}, // sarias_song
+  {-1, a, b, a, f, a, d, b}, // elegy_of_emptiness
+  {-1, -1, a, f, D, f, a, d}, // oath_to_order
+  {-1, -1, f, b, d, f, b, d}, // song_of_soaring
+  {-1, -1, d, a, d, a, b, d}, // prelude_of_light
+  {-1, -1, a, f, d, a, f, d}, // suns_song
+  {-1, -1, D, f, d, D, f, d}, // song_of_storms
+  {-1, b, a, a, D, b, a, f}, // nocturne_of_shadow
+  {f, D, f, D, a, f, a, f}, // bolero_of_fire
+  {-1, -1, b, a, f, b, a, f}, // song_of_healing
+  {-1, -1, a, a, D, D, f, f}, // song_of_double_time
+  {-1, -1, a, D, f, a, D, f}, // song_of_time
+  {-1, -1, D, f, D, a, f, D}, // requiem_of_spirit
+  {-1, d, b, d, b, D, a, D}, // sonata_of_awakening
+  {D, a, b, D, a, b, a, D} // goron_lullaby
+};
 
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
+#define NOTE_C3  131
+#define NOTE_CS3 139
+#define NOTE_D3  147
+#define NOTE_DS3 156
+#define NOTE_E3  165
+#define NOTE_F3  175
+#define NOTE_FS3 185
+#define NOTE_G3  196
+#define NOTE_GS3 208
+#define NOTE_A3  220
+#define NOTE_AS3 233
+#define NOTE_B3  247
+#define NOTE_C4  262
+#define NOTE_CS4 277
+#define NOTE_D4  294
+#define NOTE_DS4 311
+#define NOTE_E4  330
+#define NOTE_F4  349
+#define NOTE_FS4 370
+#define NOTE_G4  392
+#define NOTE_GS4 415
+#define NOTE_A4  440
+#define NOTE_AS4 466
+#define NOTE_B4  494
+#define NOTE_C5  523
+#define NOTE_CS5 554
+#define NOTE_D5  587
+#define NOTE_DS5 622
+#define NOTE_E5  659
+#define NOTE_F5  698
+#define NOTE_FS5 740
+#define NOTE_G5  784
+#define NOTE_GS5 831
+#define NOTE_A5  880
+#define NOTE_AS5 932
+#define NOTE_B5  988
+#define NOTE_C6  1047
+#define NOTE_CS6 1109
+#define NOTE_D6  1175
+#define NOTE_DS6 1245
+#define NOTE_E6  1319
+#define NOTE_F6  1397
+#define NOTE_FS6 1480
+#define NOTE_G6  1568
+#define NOTE_GS6 1661
+#define NOTE_A6  1760
+#define NOTE_AS6 1865
+#define NOTE_B6  1976
+#define NOTE_C7  2093
+#define NOTE_CS7 2217
+#define NOTE_D7  2349
+#define NOTE_DS7 2489
+#define NOTE_E7  2637
+#define NOTE_F7  2794
+#define NOTE_FS7 2960
+#define NOTE_G7  3136
+#define NOTE_GS7 3322
+#define NOTE_A7  3520
+#define NOTE_AS7 3729
+#define NOTE_B7  3951
+#define NOTE_C8  4186
+#define NOTE_CS8 4435
+#define NOTE_D8  4699
+#define NOTE_DS8 4978
+#define REST 0
 
-# Executables
-*.exe
-*.out
-*.app
+
+const short minuet_of_forest[] PROGMEM = { 
+  NOTE_D4, 210, 9, NOTE_D5, 210, 9, NOTE_B4, 840, 9, NOTE_A4, 210, 9, NOTE_B4, 210, 9, NOTE_A4, 840, 9,
+  NOTE_D4, 210, 10, NOTE_D5, 210, 10, NOTE_B4, 840, 10, NOTE_A4, 210, 10, NOTE_B4, 210, 10, NOTE_A4, 840, 10,
+  REST, 50, 10,
+  NOTE_E4, 210, 10, NOTE_A4, 210, 10, NOTE_G4, 420, 10, NOTE_A4, 420, 10,
+  REST, 50, 10,
+  NOTE_G4, 140, 10, NOTE_A4, 140, 10, NOTE_G4, 140, 10, NOTE_FS4, 840, 10, 
+  REST, 10, 10,
+  NOTE_E4, 1500, 10,    
+};
+const short eponas_song[] PROGMEM = { // TODO: add swing
+  NOTE_D5, 200, 10, NOTE_B4, 200, 10, NOTE_A4, 800, 10, NOTE_D5, 200, 10, NOTE_B4, 200, 10, NOTE_A4, 800, 10,
+  NOTE_D5, 200, 10, NOTE_B4, 200, 10, NOTE_A4, 400, 10, NOTE_B4, 400, 10, NOTE_A4, 800, 10,
+  // NOTE_FS4, 400, 10, NOTE_F4, 400, 10, NOTE_FS4, 400, 10, NOTE_CS5, 200, 10, NOTE_D5, 200, 10, 
+  // NOTE_B4, 800, 10, NOTE_D5, 800, 10,
+  // NOTE_CS5, 200, 10, NOTE_B4, 200, 10, NOTE_A4, 800, 10,
+};
+const short new_wave_bossa_nova[] PROGMEM = {
+    NOTE_B4, 825, 10, NOTE_D5, 165, 10, NOTE_B4, 165, 10, NOTE_A4, 825, 10,
+    REST, 165, 10,
+    NOTE_F4, 165, 10, NOTE_B4, 165, 10, NOTE_A4, 825, 10,
+    REST, 825, 10,
+    NOTE_B4, 825, 9, NOTE_D5, 165, 9, NOTE_B4, 165, 9, NOTE_A4, 825, 9,
+    REST, 165, 9,
+    NOTE_F4, 165, 9, NOTE_B4, 165, 9, NOTE_A4, 825, 9,
+    REST, 825, 9,
+    NOTE_G4, 825, 9, NOTE_C5, 165, 9, NOTE_G4, 165, 9, NOTE_F4, 825, 9,
+    REST, 165, 9,
+    NOTE_E4, 165, 9, NOTE_F4, 165, 9, NOTE_E4, 825, 9,
+    REST, 165, 9,
+    NOTE_C4, 165, 9, NOTE_D4, 165, 9, NOTE_E4, 165, 9,
+    NOTE_F4, 825, 9,
+    NOTE_G4, 495, 9,
+    NOTE_E4, 1000, 9,
+};
+const short zeldas_lullaby[] PROGMEM = { 
+  NOTE_B4, 800, 10, NOTE_D5, 400, 10, NOTE_A4, 1200, 10, NOTE_B4, 800, 10, NOTE_D5, 400, 10, NOTE_A4, 1200, 10,
+  NOTE_B4, 800, 10, NOTE_D5, 400, 10, NOTE_A5, 800, 10, NOTE_G5, 400, 10, NOTE_D5, 1600, 10,
+};
+const short inverted_song_of_time[] PROGMEM = {
+    NOTE_F4, 400, 10, NOTE_D4, 800, 10, NOTE_A4, 400, 10,
+    NOTE_F4, 400, 10, NOTE_D4, 800, 10, NOTE_A4, 400, 10,
+    NOTE_E4, 600, 10, NOTE_DS4, 200, 10, NOTE_D4, 200, 10, NOTE_CS4, 200, 10,
+     NOTE_C4, 500, 10, NOTE_B3, 800, 10,
+};
+const short serenade_of_water[] PROGMEM = { 
+  NOTE_D4, 500, 9, NOTE_F4, 500, 9, NOTE_A4, 500, 9, REST, 10, 9, NOTE_A4, 500, 9, NOTE_B4, 1000, 9,
+  NOTE_D4, 500, 10, NOTE_F4, 500, 10, NOTE_A4, 500, 10, REST, 10, 10, NOTE_A4, 500, 10, NOTE_B4, 1000, 10,
+  NOTE_A4, 500, 10, NOTE_D4, 500, 10, NOTE_F4, 500, 10,
+  NOTE_G4, 250, 10, NOTE_F4, 250, 10, NOTE_E4, 500, 10, NOTE_G4, 500, 10, NOTE_FS4, 1200, 10,
+};
+const short sarias_song[] PROGMEM = { 
+  NOTE_F4, 200, 10, NOTE_A4, 200, 10, NOTE_B4, 400, 10, NOTE_F4, 200, 10, NOTE_A4, 200, 10, NOTE_B4, 400, 10,
+  NOTE_F4, 200, 10, NOTE_A4, 200, 10, NOTE_B4, 200, 10, NOTE_E5, 200, 10, NOTE_D5, 400, 10, NOTE_B4, 200, 10, NOTE_C5, 200, 10,
+  NOTE_B4, 200, 10, NOTE_G4, 200, 10, NOTE_E4, 800, 10
+};
+const short elegy_of_emptiness[] PROGMEM = {
+  NOTE_A4, 1300, 8, NOTE_B4, 700, 8, NOTE_A4, 700, 8, NOTE_F4, 400, 8, NOTE_A4, 400, 8, NOTE_D5, 700, 8, NOTE_B4, 1300, 8,
+  REST, 100, 10,
+  NOTE_A4, 1300, 10, NOTE_B4, 700, 10, NOTE_A4, 700, 10, NOTE_F4, 400, 10, NOTE_A4, 400, 10, NOTE_D5, 700, 10, NOTE_B4, 1300, 10,
+  REST, 100, 10,
+  NOTE_A4, 1300, 8, NOTE_B4, 700, 8, NOTE_A4, 700, 8, NOTE_F4, 1600, 8,
+  REST, 10, 10,
+  NOTE_A5, 1300, 10, NOTE_B5, 700, 10, NOTE_A5, 700, 10, NOTE_F5, 700, 10,
+  REST, 10, 10,
+  NOTE_D5, 700, 10,
+  NOTE_E5, 2000, 10,
+};
+const short oath_to_order[] PROGMEM = {
+    NOTE_A4, 800, 8, NOTE_F4, 400, 8, NOTE_D4, 400, 8, NOTE_F4, 400, 8, NOTE_A4, 400, 8, NOTE_D5, 1200, 8,
+  REST, 50, 10,
+    NOTE_A4, 800, 10, NOTE_F4, 400, 10, NOTE_D4, 400, 10, NOTE_F4, 400, 10, NOTE_A4, 400, 10, NOTE_D5, 1200, 10,
+  REST, 50, 10,
+    NOTE_F4, 1200, 10, NOTE_G4, 1200, 10, NOTE_F4, 1600, 10,
+};
+const short song_of_soaring[] PROGMEM = {
+    NOTE_F4, 200, 9, NOTE_B4, 200, 9, NOTE_D5, 400, 9, NOTE_F4, 200, 9, NOTE_B4, 200, 9, NOTE_D5, 400, 9,
+    NOTE_F4, 200, 9, NOTE_B4, 200, 9, NOTE_D5, 200, 9, NOTE_FS4, 200, 9, NOTE_C5, 200, 9, NOTE_DS5, 200, 9,
+    NOTE_G4, 200, 9, NOTE_CS5, 200, 9, NOTE_E5, 200, 9, NOTE_GS4, 200, 9, NOTE_D5, 200, 9, NOTE_F5, 200, 9,
+    NOTE_A4, 200, 9, NOTE_DS5, 200, 9, NOTE_FS5, 200, 9, NOTE_AS4, 200, 9, NOTE_E5, 200, 9, NOTE_G5, 200, 9,
+    NOTE_GS5, 1200, 9,
+};
+const short prelude_of_light[] PROGMEM = { 
+  NOTE_D5, 250,  9, NOTE_A4, 750,  9, NOTE_D5, 250,  9, NOTE_A4, 250,  9, NOTE_B4, 250,  9, NOTE_D5, 1250, 9,
+  NOTE_D5, 250, 10, NOTE_A4, 750, 10, NOTE_D5, 250, 10, NOTE_A4, 250, 10, NOTE_B4, 250, 10, NOTE_D5, 1250, 10,
+  REST, 100, 10, NOTE_D5, 1000, 10, REST, 100, 10, NOTE_D5, 600, 10, NOTE_CS5, 400, 10, REST, 100, 10,
+  NOTE_D3, 250, 9, NOTE_FS3, 250, 9, NOTE_A3, 250, 9, NOTE_D4, 250, 9, NOTE_FS4, 250, 9, NOTE_A4, 250, 9,
+  NOTE_D5, 250, 9, NOTE_FS5, 250, 9, NOTE_A5, 250, 9, NOTE_CS6, 250, 9, NOTE_D6 + 25, 1200, 9,
+};
+const short suns_song[] PROGMEM = { 
+  NOTE_A4, 200, 10, REST, 20, 10, NOTE_F4, 200, 10, REST, 20, 10, NOTE_D5, 300, 10, REST, 300, 10,
+  NOTE_A4, 200, 10, REST, 20, 10, NOTE_F4, 200, 10, REST, 20, 10, NOTE_D5, 300, 10, REST, 300, 10,
+  NOTE_A4, 100, 10, NOTE_C5, 100, 10, NOTE_D5, 100, 10, NOTE_E5, 100, 10, NOTE_F5, 100, 10, NOTE_G5, 500, 10,
+};
+const short song_of_storms[] PROGMEM = { 
+  NOTE_D4, 150, 10, NOTE_F4, 150, 10, NOTE_D5, 600, 10, NOTE_D4, 150, 10, NOTE_F4, 150, 10, NOTE_D5, 600, 10,
+  NOTE_E5, 600, 10, NOTE_F5, 150, 10, NOTE_E5, 150, 10, NOTE_F5, 150, 10, NOTE_E5, 150, 10, NOTE_C5, 150, 10, NOTE_A4, 590, 10,
+  // REST, 10, 10, NOTE_A4, 300, 10, NOTE_D4, 300, 10, NOTE_F4, 150, 10, NOTE_G4, 150, 10, NOTE_A4, 890, 10, 
+  // REST, 10, 10, NOTE_A4, 300, 10, NOTE_D4, 300, 10, NOTE_F4, 150, 10, NOTE_G4, 150, 10, NOTE_E4, 900, 10,
+};
+const short nocturne_of_shadow[] PROGMEM = {
+  NOTE_B4, 600, 9, NOTE_A4, 600, 9, NOTE_A4, 300, 9, NOTE_D4, 300, 9, NOTE_B4, 300, 9, NOTE_A4, 300, 9, NOTE_F4, 2300, 9,
+  REST, 100, 10,
+  NOTE_B4, 600, 10, NOTE_A4, 600, 10, NOTE_A4, 300, 10, NOTE_D4, 300, 10, NOTE_B4, 300, 10, NOTE_A4, 300, 10, NOTE_F4, 2300, 10,
+  REST, 100, 10,
+  NOTE_G4, 600, 9, NOTE_F4, 600, 9, REST, 9, 9, NOTE_F4, 300, 9, NOTE_C4, 300, 9, NOTE_G4, 300, 9, NOTE_F4, 300, 9,
+  REST, 10, 10,
+  NOTE_GS4, 600, 10, NOTE_FS4, 600, 10, REST, 10, 10, NOTE_FS4, 300, 10, NOTE_CS4, 300, 10, NOTE_GS4, 300, 10, NOTE_FS4, 300, 10,
+  NOTE_F4, 2400, 10 
+};
+const short bolero_of_fire[] PROGMEM = {
+    NOTE_F4, 150, 9, NOTE_D4, 150, 9, NOTE_F4, 150, 9, NOTE_D4, 150, 9, NOTE_A4, 150, 9, NOTE_F4, 150, 9, NOTE_A4, 150, 9, NOTE_F4, 150, 9,
+    REST, 1000, 10,
+    NOTE_F5, 150, 10, NOTE_D5, 150, 10, NOTE_F5, 150, 10, NOTE_D5, 150, 10, NOTE_A5, 150, 10, NOTE_F5, 150, 10, NOTE_A5, 150, 10, NOTE_F5, 150, 10,
+    REST, 1000, 10,
+    NOTE_G4, 150, 9, NOTE_E4, 150, 9, NOTE_G4, 150, 9, NOTE_E4, 150, 9, NOTE_AS4, 150, 9, NOTE_G4, 150, 9, NOTE_AS4, 150, 9, NOTE_G4, 150, 9,
+    REST, 1000, 10,
+    NOTE_F4, 150, 9, NOTE_A4, 150, 9, NOTE_F4, 150, 9, NOTE_A4, 150, 9, NOTE_D5, 150, 9, NOTE_A4, 150, 9, NOTE_D5, 150, 9, NOTE_A4, 150, 9, NOTE_F5, 150, 9, NOTE_D5, 150, 9, NOTE_F5, 150, 9, NOTE_D5, 150, 9, 
+    NOTE_A5, 150, 9, NOTE_E5, 150, 9, NOTE_A5, 150, 9, NOTE_E5, 150, 9, NOTE_G5, 150, 9, NOTE_CS5, 150, 9, NOTE_G5, 150, 9, NOTE_CS5, 150, 9, NOTE_F5, 150, 9, NOTE_A4, 150, 9, NOTE_F4, 150, 9, NOTE_E4, 150, 9, 
+    NOTE_D4, 1000, 10,
+};
+const short song_of_healing[] PROGMEM = {
+  NOTE_B4, 450, 9, NOTE_A4, 450, 9, NOTE_F4, 450, 9,
+  NOTE_B4, 450, 9, NOTE_A4, 450, 9, NOTE_F4, 450, 9, REST, 20, 9,
+  NOTE_B4, 450, 9, NOTE_A4, 450, 9, REST, 20, 9, NOTE_E4, 225, 9, NOTE_D4, 225, 9,
+  NOTE_E4, 1200, 9,
+};
+const short song_of_double_time[] PROGMEM = {
+    NOTE_A4, 125, 10, REST, 50, 10, NOTE_A4, 125, 10, REST, 50, 10, NOTE_D4, 125, 10, REST, 50, 10, NOTE_D4, 125, 10, REST, 50, 10, NOTE_F4, 125, 10, REST, 50, 10, NOTE_F4, 125, 10, REST, 50, 10,
+    NOTE_A4, 125, 10, REST, 50, 10, NOTE_A4, 125, 10, REST, 50, 10, NOTE_D4, 125, 10, REST, 50, 10, NOTE_D4, 125, 10, REST, 50, 10, NOTE_F4, 125, 10, REST, 50, 10, NOTE_F4, 125, 10, REST, 50, 10,
+    NOTE_AS4, 125, 10, REST, 50, 10, NOTE_AS4, 125, 10, REST, 50, 10, NOTE_E4, 125, 10, REST, 50, 10, NOTE_E4, 125, 10, REST, 50, 10, NOTE_G4, 125, 10, REST, 50, 10, NOTE_G4, 125, 10, REST, 50, 10,
+    NOTE_CS5, 125, 10, REST, 50, 10, NOTE_CS5, 125, 10, REST, 50, 10, NOTE_AS4, 125, 10, REST, 50, 10, NOTE_AS4, 125, 10, REST, 50, 10, NOTE_E5, 125, 10, REST, 50, 10, NOTE_E5, 125, 10, REST, 50, 10,
+    NOTE_F5, 725, 10,
+};
+const short song_of_time[] PROGMEM = { 
+  NOTE_A4, 400, 10, NOTE_D4, 800, 10, NOTE_F4, 400, 10, NOTE_A4, 400, 10, NOTE_D4, 800, 10, NOTE_F4, 400, 10,
+  NOTE_A4, 200, 10, NOTE_C5, 200, 10, NOTE_B4, 400, 10, NOTE_G4, 400, 10, NOTE_F4, 200, 10, NOTE_G4, 200, 10,
+  NOTE_A4, 400, 10, NOTE_D4, 400, 10, NOTE_C4, 200, 10, NOTE_E4, 200, 10, NOTE_D4, 500, 10,
+};
+const short requiem_of_spirit[] PROGMEM = { 
+  NOTE_D4, 600, 9, NOTE_F4, 300, 9, NOTE_D4, 300, 9, NOTE_A4, 600, 9, NOTE_F4, 600, 9, NOTE_D4, 1800, 9,
+  REST, 300, 10,
+  NOTE_D4, 600, 10, NOTE_F4, 300, 10, NOTE_D4, 300, 10, NOTE_A4, 600, 10, NOTE_F4, 600, 10, NOTE_D4, 1800, 10,
+  REST, 300, 10,
+  NOTE_D4, 620, 10, NOTE_F4, 350, 10, NOTE_D4, 380, 10, NOTE_A4, 750, 10, NOTE_F4, 800, 10, NOTE_D4, 2000, 10,
+};
+const short sonata_of_awakening[] PROGMEM = {
+  NOTE_D5, 300, 9, NOTE_B4, 300, 9, NOTE_D5, 300, 9,
+  NOTE_B4, 300, 9, REST, 300, 9, NOTE_D4, 300, 9, REST, 200, 9,
+  NOTE_A4, 300, 9,  REST, 600, 9,
+  NOTE_D4, 300, 9,  REST, 600, 9,
+  NOTE_D5, 300, 9, NOTE_B4, 300, 9, NOTE_D5, 300, 9,
+  NOTE_B4, 300, 9, REST, 300, 9, NOTE_D4, 300, 9, REST, 200, 9,
+  NOTE_A4, 300, 9,  REST, 600, 9,
+  NOTE_D5, 300, 9, NOTE_B4, 300, 9, NOTE_D5, 300, 9,
+  NOTE_B4, 300, 9, REST, 300, 9, NOTE_D4, 300, 9, REST, 200, 9,
+  NOTE_A4, 300, 9,  REST, 600, 9,
+  NOTE_D4, 300, 9,  REST, 600, 9,
+  NOTE_A4, 620, 9, NOTE_G4, 660, 9, NOTE_E4, 700, 9,
+  NOTE_FS4, 880, 9,
+};
+const short goron_lullaby[] PROGMEM = {
+    NOTE_D4, 720, 10, NOTE_A4, 720, 10, NOTE_B4, 720, 10,
+    REST, 10, 10,
+    NOTE_D4, 720, 10, NOTE_A4, 720, 10, NOTE_B4, 720, 10,
+    REST, 10, 10,
+    NOTE_A4, 720, 10, NOTE_D4, 1800, 10,
+    REST, 10, 10,
+    NOTE_D4, 720, 9, NOTE_A4, 720, 9, NOTE_B4, 720, 9,
+    REST, 10, 10,
+    NOTE_D4, 720, 9, NOTE_A4, 720, 9, NOTE_B4, 720, 9,
+    REST, 10, 10,
+    NOTE_A4, 720, 9, NOTE_D4, 1800, 9,
+    REST, 10, 10,
+    NOTE_F4, 1440, 10, NOTE_G4, 600, 10,
+    REST, 100, 10,
+    NOTE_E4, 1440, 10, NOTE_F4, 600, 10,
+    REST, 100, 10,
+    NOTE_D4, 2000, 10
+};
+
+const short* const full_songs[SONG_COUNT] PROGMEM = {
+    minuet_of_forest,
+    eponas_song,
+    new_wave_bossa_nova,
+    zeldas_lullaby,
+    inverted_song_of_time,
+    serenade_of_water,
+    sarias_song,
+    elegy_of_emptiness,
+    oath_to_order,
+    song_of_soaring,
+    prelude_of_light,
+    suns_song,
+    song_of_storms,
+    nocturne_of_shadow,
+    bolero_of_fire,
+    song_of_healing,
+    song_of_double_time,
+    song_of_time,
+    requiem_of_spirit,
+    sonata_of_awakening,
+    goron_lullaby,
+};
+const short song_lengths[SONG_COUNT] PROGMEM = {
+    sizeof minuet_of_forest / sizeof minuet_of_forest[0],
+    sizeof eponas_song / sizeof eponas_song[0],
+    sizeof new_wave_bossa_nova / sizeof new_wave_bossa_nova[0],
+    sizeof zeldas_lullaby / sizeof zeldas_lullaby[0],
+    sizeof inverted_song_of_time / sizeof inverted_song_of_time[0],
+    sizeof serenade_of_water / sizeof serenade_of_water[0],
+    sizeof sarias_song / sizeof sarias_song[0],
+    sizeof elegy_of_emptiness / sizeof elegy_of_emptiness[0],
+    sizeof oath_to_order / sizeof oath_to_order[0],
+    sizeof song_of_soaring / sizeof song_of_soaring[0],
+    sizeof prelude_of_light / sizeof prelude_of_light[0],
+    sizeof suns_song / sizeof suns_song[0],
+    sizeof song_of_storms / sizeof song_of_storms[0],
+    sizeof nocturne_of_shadow / sizeof nocturne_of_shadow[0],
+    sizeof bolero_of_fire / sizeof bolero_of_fire[0],
+    sizeof song_of_healing / sizeof song_of_healing[0],
+    sizeof song_of_double_time / sizeof song_of_double_time[0],
+    sizeof song_of_time / sizeof song_of_time[0],
+    sizeof requiem_of_spirit / sizeof requiem_of_spirit[0],
+    sizeof sonata_of_awakening / sizeof sonata_of_awakening[0],
+    sizeof goron_lullaby / sizeof goron_lullaby[0],
+};
+
+
+const short chime[5] PROGMEM = {NOTE_A5, NOTE_B5, NOTE_D6, NOTE_E6, NOTE_A6 + 25};
+const int note_frequencies[] = {0, NOTE_D5, NOTE_B4, NOTE_A4, NOTE_F4, NOTE_D4};
+int played_notes[CHECK_SONG_LENGTH] = {-1, -1, -1, -1, -1, -1, -1, -1};
+
+const int SPEAKER_PIN = 0;
+void setup() {
+    pinMode(SPEAKER_PIN, OUTPUT);
+}
+
+void loop() {
+    for (int i = 1; i <= 5; i++) {
+        if (digitalRead(i) == HIGH) {
+            while (digitalRead(i) == HIGH) {
+                TimerFreeTone(SPEAKER_PIN, note_frequencies[i], 50);
+            }
+            // The button was lifted.
+            // Update the recent notes array - push all previous notes up and then append last active button
+            for (int i=CHECK_SONG_LENGTH-1; i>0; i--) {
+                played_notes[i] = played_notes[i - 1];
+            }
+            played_notes[0] = i;
+            check_song();
+        }
+    }
+    // TODO: eliminate button priority? If a new button is pressed, then end the previous note and play the new one?
+
+    // TODO: press every button to toggle "freestyle" mode which disables song recognition?
+}
+
+void check_song() {
+    for (int i=0;i < SONG_COUNT; i++) {
+        bool song_matched = true;
+        // Go backwards through the played notes to check if they were correct
+        for (int j=CHECK_SONG_LENGTH-1;j>=0;j--) {
+      		int song_note = pgm_read_word_near(all_songs[i]+(CHECK_SONG_LENGTH-1-j)) ;
+            //int song_note = all_songs[i][CHECK_SONG_LENGTH-1-j];
+            int played_note = played_notes[j];
+            if (song_note == -1 || (song_note != -1 && song_note == played_note)) {
+                // Continue the loop to check the previous note
+                continue;
+            }
+            else {
+                // No match, break out of the note checking loop
+                song_matched = false;
+                break;
+            }
+        }
+        if (song_matched) {
+	        delay(100);
+            // Play a chime
+            for(short j = 0;j < 5;j++){
+              short freq = pgm_read_word_near(chime + j);
+              TimerFreeTone(SPEAKER_PIN, freq, 100);
+            }
+            // Hold the last note of the chime just a little longer
+            TimerFreeTone(SPEAKER_PIN, pgm_read_word_near(chime + 4), 75);
+	        delay(300);
+            
+          	// Play the song          
+            const uint16_t song_address = pgm_read_word_near(full_songs+i);
+            int length = pgm_read_word_near(song_lengths + i) / 3;
+            for(int j = 0;j < length;j++){
+              short freq = pgm_read_word_near(song_address+j*3*2) ;
+              short duration = pgm_read_word_near(song_address+j*3*2+2) ;
+              short volume = pgm_read_word_near(song_address+j*3*2+4) ;
+              TimerFreeTone(SPEAKER_PIN, freq, duration, volume);
+            }
+            // Clear the played notes
+            for(int j = 0;j < CHECK_SONG_LENGTH;j++){
+                played_notes[j] = -1;
+            }
+            // Break out of song checking loop
+            break;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TimerFreeTone created by Tim Eckel - teckel@leethost.com
+// Copyright 2016 License: GNU GPL v3 http://www.gnu.org/licenses/gpl-3.0.html
+// https://bitbucket.org/teckel12/arduino-timer-free-tone/src/master/TimerFreeTone.cpp
+// ---------------------------------------------------------------------------
+uint8_t _tft_volume[] = { 255, 200, 150, 125, 100, 87, 50, 33, 22, 2 }; // Duty for linear volume control.
+
+void TimerFreeTone(uint8_t pin, unsigned long frequency, unsigned int duration, uint8_t volume) {
+  int originalFreq = frequency;
+	if (frequency == 0 || volume == 0) { // If frequency or volume are zero, just wait duration and exit.
+		delay(duration);
+		return;
+	} 
+	frequency = 1000000 / frequency;                              // Calculate the square wave length (in microseconds).
+	uint32_t duty = frequency / _tft_volume[min(volume, 10) - 1]; // Calculate the duty cycle (volume).
+#ifdef __AVR__
+	uint8_t pinBit = digitalPinToBitMask(pin);                                  // Get the bitmask for the pin.
+	volatile uint8_t *pinOutput = (uint8_t *) portOutputRegister(digitalPinToPort(pin)); // Get the port register for the pin.
+	volatile uint8_t *portMode = (uint8_t *) portModeRegister(digitalPinToPort(pin));    // Get the port mode register for the pin.
+	*portMode |= pinBit;                                                        // Set pin to output mode.
+#else
+	pinMode(pin, OUTPUT);                                                       // Set pin to output mode.
+#endif
+
+  	int endDelay = 0;
+  if (volume < 10) {
+    endDelay = duration / 5;
+    // duration = 4 * duration / 5;
+  }
+	uint32_t startTime = millis();           // Starting time of note.
+	while(millis() - startTime < duration) { // Loop for the duration.
+	#ifdef __AVR__
+		*pinOutput |= pinBit;    // Set pin high.
+		delayMicroseconds(duty); // Square wave duration (how long to leave pin high).
+		*pinOutput &= ~pinBit;   // Set pin low.
+	#else
+		digitalWrite(pin,HIGH);  // Set pin high.
+		delayMicroseconds(duty); // Square wave duration (how long to leave pin high).
+		digitalWrite(pin,LOW);   // Set pin low.
+	#endif
+		delayMicroseconds(frequency - duty); // Square wave duration (how long to leave pin low).
+	}
+  	// delay(endDelay);
+}
